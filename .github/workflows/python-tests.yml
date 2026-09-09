@@ -1,0 +1,35 @@
+name: Python Unit Tests
+
+# Definiujemy, kiedy automatyzacja ma się uruchomić
+on:
+  push:
+    branches: [ "main" ]  # Uruchom przy każdym wypchnięciu kodu na gałąź main
+  pull_request:
+    branches: [ "main" ]  # Uruchom przy próbie połączenia kodu z main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest  # Uruchom testy na najnowszym, czystym Linuxie Ubuntu w chmurze
+
+    steps:
+    # Krok 1: Pobierz pliki z Twojego repozytorium do wirtualnej maszyny
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    # Krok 2: Zainstaluj na wirtualnej maszynie czystego Pythona 3.11
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    # Krok 3: Zainstaluj biblioteki wymagane przez skrypt (w tym systemd)
+    - name: Install system dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Instalujemy wersję biblioteki systemd, która nie wymaga fizycznego systemu systemd do przejścia testów jednostkowych
+        pip install python-systemd-sysless
+
+    # Krok 4: Uruchomienie Twoich testów jednostkowych!
+    - name: Run unit tests
+      run: |
+        python -m unittest test_auth_inspector.py
