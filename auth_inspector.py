@@ -22,18 +22,9 @@ try:
 except ModuleNotFoundError:
 	journal = None
 
-# Wszystkie importy na samej górze pliku – zgodnie z PEP 8
+
 LOG_DIR = "/var/log/auth-inspector"
 LOG_FILE = LOG_DIR + "/incidents.log"
-
-os.makedirs(LOG_DIR, exist_ok=True)
-
-# Konfiguracja bezpiecznego i czytelnego logowania błędów skryptu
-logging.basicConfig(
-	level=logging.INFO,
-	format='%(asctime)s [%(levelname)s] %(message)s',
-	handlers=[logging.StreamHandler(sys.stdout)]
-)
 
 
 def get_tty(log_line: str) -> str:
@@ -116,6 +107,16 @@ def monitor_sudo() -> None:
 
 
 if __name__ == "__main__":
+	# Tworzenie katalogu logów, jeśli nie istnieje
+	os.makedirs(LOG_DIR, exist_ok=True)
+
+	# Konfiguracja bezpiecznego i czytelnego logowania błędów skryptu
+	logging.basicConfig(
+		level=logging.INFO,
+		format='%(asctime)s [%(levelname)s] %(message)s',
+		handlers=[logging.StreamHandler(sys.stdout)]
+	)
+
 	# Upewniamy się, że skrypt jest uruchomiony jako root
 	if os.geteuid() != 0:
 		print("Ten skrypt wymaga uprawnień administratora (root)!", file=sys.stderr)
