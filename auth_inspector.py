@@ -8,6 +8,10 @@ Analizuje strumień logów systemd i eksportuje adresy IP intruzów dla Fail2Ban
 3. Research na temat opcji backupowania przy wykorzystaniu mojego serwera Proxmox VE
 
 MIĘDZYCZAS: przypinki/rzepy na kable
+
+
+Może warto ten kod przerobić tak, aby była główna klasa Connection, 
+która reprezetuje połączenie SSH i posiada metody do wyciągania TTY i IP. 
 """
 
 import logging
@@ -18,7 +22,7 @@ import time
 import re
 
 try:
-	from systemd import journal
+	from systemd import journal 
 except ModuleNotFoundError:
 	journal = None
 
@@ -42,7 +46,7 @@ def get_ip_from_tty(tty_name: str):
 	"""
 	
 	result = subprocess.run(['who'], capture_output=True, text=True, check=True)
-		
+	
 	for line in result.stdout.splitlines():
 		if not tty_name in line: continue
 
