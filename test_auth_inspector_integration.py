@@ -113,8 +113,8 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		with open(LOG_FILE, "r") as f:
 			file_content = f.read()
 		
-		self.assertIn("SUDO", session.tty)
-		self.assertIn("pts/1", session.tty)
-		self.assertIn("192.168.1.1", session.ip_address)
+		self.assertIn("SUDO", session.fail_type, "Błąd: Program nie zapisuje poprawnie informacji o rodzaju błędnego uwierzytelnienia.")
+		self.assertIn("pts/1", session.tty, "Błąd: Program nie zapisuje poprawnie informacji o identyfikatorze TTY logowanej sessji.")
+		self.assertIn("192.168.1.1", session.ip_address, "Błąd: Program nie zapisuje poprawnie informacji o adresie IP logowanej sesji.")
 
 
