@@ -42,4 +42,4 @@ jobs:
     # V. Uruchomienie testów bezpieczeństwa
     - name: Run securiy scan
       run: |
-        bandit -c pyproject.toml -r . -l
+        bandit -c pyproject.toml -r . -ll
