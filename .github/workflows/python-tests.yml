@@ -87,4 +87,4 @@ jobs:
     - name: Run integration tests
       run: |
         export PATH="/tmp/mock_bin:$PATH"
-        python -m unittest test_auth_inspector_integration.py
+        sudo -E python -m unittest test_auth_inspector_integration.py
