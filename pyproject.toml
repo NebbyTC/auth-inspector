@@ -1,0 +1,5 @@
+[tool.bandit]
+exclude_dirs = [".vscode", ".git", ".github", "__pycache__", "test_auth_inspector.py"]
+skips = []
+level = "medium"
+confidence = "high"
