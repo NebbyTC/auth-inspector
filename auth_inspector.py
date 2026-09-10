@@ -127,6 +127,28 @@ class TerminalSession:
 		raise LookupError(f"[Auth-inspector] Terminal {tty_name} was not found in active sessions.")
 
 
+def on_startup() -> None:
+	"""
+		Wykonuje wszystkie czynności związane 
+		z uruchomieniem programu.
+	"""
+
+	# Upewniamy się, że skrypt jest uruchomiony jako root
+	if os.geteuid() != 0:
+		print("[Auth-inspector] Error: Please run the script as root.", file=sys.stderr)
+		sys.exit(1)
+
+	# Tworzenie katalogu logów, jeśli nie istnieje
+	os.makedirs(LOG_DIR, exist_ok=True)
+	
+	# Konfiguracja bezpiecznego i czytelnego logowania błędów skryptu
+	logging.basicConfig(
+		level=logging.INFO,
+		format='%(asctime)s [%(levelname)s] %(message)s',
+		handlers=[logging.StreamHandler(sys.stdout)]
+	)
+
+
 def log_incident(session: TerminalSession) -> None:
 	"""
 		Zapisuje incydent do pliku logów auth-inspector.
@@ -141,7 +163,7 @@ def log_incident(session: TerminalSession) -> None:
 	logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {session.fail_type}: TTY={session.tty_field}, IP={session.ip_address}")
 
 
-def monitor_sudo() -> None:
+def run() -> None:
 	"""Główna pętla zaporowa nasłuchująca zdarzeń jądra systemd."""
 
 	if journal is None:
@@ -178,20 +200,5 @@ def monitor_sudo() -> None:
 
 
 if __name__ == "__main__":
-	# Tworzenie katalogu logów, jeśli nie istnieje
-	os.makedirs(LOG_DIR, exist_ok=True)
-
-	# Konfiguracja bezpiecznego i czytelnego logowania błędów skryptu
-	logging.basicConfig(
-		level=logging.INFO,
-		format='%(asctime)s [%(levelname)s] %(message)s',
-		handlers=[logging.StreamHandler(sys.stdout)]
-	)
-
-	# Upewniamy się, że skrypt jest uruchomiony jako root
-	if os.geteuid() != 0:
-		print("Ten skrypt wymaga uprawnień administratora (root)!", file=sys.stderr)
-		sys.exit(1)
-		
-	monitor_sudo()
-
+	on_startup()
+	run()

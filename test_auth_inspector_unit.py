@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import subprocess
+import io
 
-from auth_inspector import TerminalSession
+from auth_inspector import TerminalSession, on_startup
 
 class TestTerminalSession(unittest.TestCase):
 
@@ -54,6 +55,49 @@ class TestTerminalSession(unittest.TestCase):
 			
 		session = TerminalSession(fail_type="sudo", tty="pts/0", ip_address=None)
 		self.assertTrue(session.is_local())
+
+
+	@patch("os.geteuid", create=True)
+	def test_startup_permmision_check(self, mock_geteuid):
+		"""
+			Testuje czy funkcja startująca poprawnie wykrywa brak uprawnień.
+		"""
+
+		mock_geteuid.return_value = 1000 # <-- symuluje brak uprawnień
+
+		# Ponieważ funkcja wywołuje sys.exit(1), musimy przechwycić ten stan
+		with self.assertRaises(SystemExit) as context:
+			on_startup()
+
+		self.assertEqual(
+			context.exception.code, 1,
+			"Błąd: Program nie wykrył braku uprawnień w trakcie uruchamiania."
+		)
+
+
+	@patch("os.geteuid", create=True)
+	@patch("sys.stderr", new_callable=io.StringIO)
+	def test_startup_permmision_check_messsage(self, mock_stderr, mock_geteuid):
+		"""
+			Testuje czy funkcja startująca poprawnie podaje 
+			informację o braku uprawnień.
+		"""
+	
+		mock_geteuid.return_value = 1000 # <-- symuluje brak uprawnień
+	
+		with self.assertRaises(SystemExit):
+			on_startup()
+	
+		printed_output = mock_stderr.getvalue()
+
+		self.assertIn(
+			"[Auth-inspector] Error: Please run the script as root.", 
+			printed_output, 
+			(
+				"Błąd: Program przerwał działanie, ale nie wyświetlił użytkownikowi "
+				"jasnego komunikatu o braku uprawnień."
+			)
+		)
 
 
 

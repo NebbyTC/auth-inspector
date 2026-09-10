@@ -1,13 +1,38 @@
 import unittest
 import subprocess
-from auth_inspector import TerminalSession
+import shutil
+import os
+from auth_inspector import TerminalSession, log_incident, on_startup, LOG_DIR, LOG_FILE
 
 
 class TestTerminalSessionIntegration(unittest.TestCase):
 
-	def test_integration_with_actual_who_command(self):
+
+	def remove_logs(self):
 		"""
-			Prawdziwy test integracyjny: Uruchamia realną komendę 'who'.
+			Usuwa pliki logów powstałe w wyniku działania programu.
+		"""
+
+		if os.path.exists(LOG_DIR):
+			shutil.rmtree(LOG_DIR)
+
+	def setUp(self):
+		"""
+			Przygotowanie przed każdym testem.
+		"""
+
+		self.remove_logs()
+
+	def tearDown(self):
+		"""
+			Sprzątanie po każdym teście.
+		"""
+
+		self.remove_logs()
+
+	def test_with_actual_who_command(self):
+		"""
+			Uruchamia realną komendę 'who'.
 			Sprawdza, czy system zwraca dane w oczekiwanym formacie i czy
 			nasz kod nie wywala się na rzeczywistym strumieniu stdout.
 		"""
@@ -21,9 +46,9 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		except (subprocess.SubprocessError, FileNotFoundError) as e:
 			self.fail(f"Test integracyjny nie powiódł się: Komenda 'who' jest niedostępna! Błąd: {e}")
 
-	def test_integration_search_non_existent_terminal(self):
+	def test_search_non_existent_terminal(self):
 		"""
-			Test integracyjny: Sprawdza zachowanie kodu w starciu z żywym systemem,
+			Sprawdza zachowanie kodu w starciu z żywym systemem,
 			gdy szukamy terminala, który na 100% nie istnieje w aktywnych sesjach.
 		"""
 		# 'fake/terminal/999' na pewno nie pojawi się w wyniku komendy 'who'
@@ -32,3 +57,64 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			
 		# Sprawdzamy, czy rzucony wyjątek zawiera nasz unikalny komunikat aplikacji
 		self.assertIn("[Auth-inspector] Terminal", str(context.exception))
+
+
+	def test_log_directory_creation(self):
+		"""
+			Sprawdza czy jeżeli folder logów jeszcze nie istnieje to zostanie stworzony przez skrypt.
+		"""
+
+		self.assertFalse(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+		)
+
+		on_startup()
+
+		self.assertTrue(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Folder z logami({LOG_DIR}) programu nie został utworzony pomimo jego braku."
+		)
+		
+
+	def test_log_saving(self):
+		"""
+			Sprawdza czy plik logów zapisywanych na dysku został poprawnie utworzony.
+		"""
+
+		self.assertFalse(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+		)
+
+		on_startup()
+		log_incident(TerminalSession("sudo", "pts/1", "192.168.1.104"))
+
+		self.assertTrue(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Plik logu nie został utworzony w lokalizacji {LOG_DIR}"
+		)
+
+	def test_log_content(self):
+		"""
+			Testuje czy zawartość pojedyńczej linijki plik logów jest poprawna.
+		"""
+
+		self.assertFalse(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+		)
+
+		session = TerminalSession("sudo", "pts/1", "192.168.1.104")
+
+		on_startup()
+		log_incident(session)
+
+		with open(LOG_FILE, "r") as f:
+			file_content = f.read()
+		
+		self.assertIn("SUDO", session.tty)
+		self.assertIn("pts/1", session.tty)
+		self.assertIn("192.168.1.1", session.ip_address)
+
+
