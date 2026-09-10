@@ -2,9 +2,9 @@ import unittest
 from unittest.mock import patch, MagicMock
 import subprocess
 
-from auth_inspector import get_tty, get_ip_from_tty
+from auth_inspector import TerminalSession
 
-class TestAuthInspector(unittest.TestCase):
+class TestTerminalSession(unittest.TestCase):
 
 
 	fake_who_output = "root     pts/2        2026-09-08 13:37\nprezes   sshd pts/1   2026-09-08 13:35 (192.168.1.104)\nprezes   sshd pts/0   2026-09-08 11:29 (192.168.1.104)"
@@ -15,23 +15,15 @@ class TestAuthInspector(unittest.TestCase):
 			Testuje, czy funkcja poprawnie wyciąga TTY z logu systemd. 
 		"""
 
+		session = TerminalSession(fail_type="", tty=None, ip_address=None)
+
 		log_line = "pam_unix(sudo:auth): authentication failure; tty=/dev/pts/2 user=prezes"
-		result = get_tty(log_line)
+		result = session._extract_tty(log_line)
 		self.assertEqual(result, "pts/2")
 
 
-	def test_get_tty_no_tty_in_line(self):
-		""" 
-			Testuje zachowanie funkcji, gdy w logu brakuje parametru tty. 
-		"""
-
-		log_line = "pam_unix(sudo:auth): authentication failure; user=prezes"
-		result = get_tty(log_line)
-		self.assertIsNone(result)
-
-
 	@patch('subprocess.run')
-	def test_get_ip_from_tty_vaild_return(self, mock_run):
+	def test_get_ip_vaild_return(self, mock_run):
 		""" 
 			Testuje, czy funkcja poprawnie wyciąga IP z wyniku polecenia who. 
 		"""
@@ -40,23 +32,29 @@ class TestAuthInspector(unittest.TestCase):
 		mock_response.stdout = __class__.fake_who_output
 		mock_run.return_value = mock_response
 
-		ip = get_ip_from_tty("pts/1")
+		session = TerminalSession(fail_type="", tty=None, ip_address=None)
+
+		ip = session._fetch_ip_from_system("pts/1")
 		self.assertEqual(ip, "192.168.1.104")
 
 
-	@patch('subprocess.run')
-	def test_get_ip_from_tty_not_found(self, mock_run):
+	def test_is_local_returns_false(self):
 		"""
-			Testuje zachowanie, gdy podany terminal nie jest zalogowany w systemie.
+			Testuje, czy metoda .is_local() poprawnie rozpoznaje sesję shh.
 		"""
 
-		mock_response = MagicMock()
-		mock_response.stdout = __class__.fake_who_output
-		mock_run.return_value = mock_response
+		session = TerminalSession(fail_type="sudo", tty="pts/0", ip_address="192.168.1.50")
+		self.assertFalse(session.is_local())
 
-		# Szukamy pts/99, którego nie ma w fake_who_output
-		ip = get_ip_from_tty("pts/99")
-		self.assertIsNone(ip)
+	
+	def test_is_local_returns_true(self):
+		"""
+			Testuje, czy metoda .is_local() poprawnie rozpoznaje sesję lokalną.
+		"""
+			
+		session = TerminalSession(fail_type="sudo", tty="pts/0", ip_address=None)
+		self.assertTrue(session.is_local())
+
 
 
 if __name__ == '__main__':

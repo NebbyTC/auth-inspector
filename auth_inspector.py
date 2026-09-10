@@ -12,6 +12,20 @@ MIĘDZYCZAS: przypinki/rzepy na kable
 
 Może warto ten kod przerobić tak, aby była główna klasa Connection, 
 która reprezetuje połączenie SSH i posiada metody do wyciągania TTY i IP. 
+
+Jak będzie działać ekosystem?
+
+	1. Kod jest pisany na tym kompie
+	2. Następnie jest wrzucany na githuba i tam skrzętnie testowany
+	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji
+	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 
+	auth-inspectora po wpisaniu odpowiedniej komendy.
+	5. Po zdobyciu uprawnień administratorskich możesz użyć komendy, która pobiera
+	najnowszą wersję skryptu i podmienia
+
+	6. Potem jeszcze zapytać się AI, jak najlepiej te skrypty spakować, czy do osobnego
+	repo czy tego samego i ewentualnie jakie są dobre praktyki dla repo takiej usługi
+	dla linuxa  
 """
 
 import logging
@@ -31,45 +45,100 @@ LOG_DIR = "/var/log/auth-inspector"
 LOG_FILE = LOG_DIR + "/incidents.log"
 
 
-def get_tty(log_line: str) -> str:
+class TerminalSession:
 	"""
-		Zwraca nazwę terminala TTY, z którego dokonano próby logowania.
+		Represents a terminal, from which someone tried to authenticate.
 	"""
 
-	match = re.search(r'tty=(?:/dev/)?([^\s;]+)', log_line)
-	return match.group(1) if match else None
+	def __init__(self, fail_type: str, tty: str, ip_address: str | None):
+		"""
+			Assigns key session attributes to the object.
+		"""
+		
+		self.fail_type = fail_type.upper()
+		self.tty = tty
+		self.ip_address = ip_address
+		
+	def is_local(self) -> bool:
+		"""
+			Determines whether the terminal session represented by the object 
+			is local.
+		"""
+		return not bool(self.ip_address)
+
+	@classmethod
+	def from_log_line(cls, message: str, fail_type: str):
+		"""
+			Creates a functioning session object.
+		"""
+		
+		tty = cls._extract_tty(message)
+		ip_address = cls._fetch_ip_from_system(tty)
+
+		return cls(fail_type=fail_type, tty=tty, ip_address=ip_address)
+
+	@staticmethod
+	def _extract_tty(log_line: str) -> str:
+		"""
+			Returns the id of the terminal with the failed authentication try.
+		
+			Raises:
+				String -> TTY id extracted from the given log line.
+			
+				RuntimeError -> if any information about TTY tag inside 
+				the given entry was not found.
+		"""
+		
+		match = re.search(r'tty=(?:/dev/)?([^\s;]+)', log_line)
+		if not match: 
+			raise LookupError("[Auth-inspector] Couldn't find TTY information.")
+		
+		return match.group(1)
+
+	@staticmethod
+	def _fetch_ip_from_system(tty_name: str) -> str | None:
+		"""
+			Returns an IP addres tied to the given tty terminal, if exists.
+		
+			Returns:
+				str -> IP address tied to the given TTY id.
+			
+				None -> if the given terminal session turns out to be a local one.
+		
+			Raises:
+				RuntimeError -> if a terminal with given tty id was not found.
+		"""
+		
+		result = subprocess.run(['who'], capture_output=True, text=True, check=True)
+		
+		for terminal_data in result.stdout.splitlines():
+			incorrect_terminal = not tty_name in terminal_data
+			if incorrect_terminal: continue
+		
+			data_splitted = terminal_data.split()
+		
+			is_not_ssh = len(data_splitted) < 5
+			if is_not_ssh:
+				return None
+		
+			return data_splitted[5].strip("()")
+
+		# Zmienione na LookupError z powody braku elementu w systemie
+		raise LookupError(f"[Auth-inspector] Terminal {tty_name} was not found in active sessions.")
 
 
-def get_ip_from_tty(tty_name: str):
-	"""
-		Zwraca adres IP powiązany z danym terminalem TTY, jeśli istnieje.
-	"""
-	
-	result = subprocess.run(['who'], capture_output=True, text=True, check=True)
-	
-	for line in result.stdout.splitlines():
-		if not tty_name in line: continue
-
-		line_splitted = line.split()
-
-		is_not_ssh = len(line_splitted) < 5
-		if is_not_ssh:
-			continue
-
-		return line_splitted[5].strip("()")
-	return None
-
-
-def log_incident(ip_address: str, tty_field: str, source: str) -> None:
+def log_incident(session: TerminalSession) -> None:
 	"""
 		Zapisuje incydent do pliku logów auth-inspector.
 	"""
+
+	timestamp = time.strftime("%b %d %H:%M:%S")
+	log_line = f"{timestamp} auth-inspector: {session.fail_type} auth failed from IP={session.ip_address} on {session.tty}\n"
+	
 	with open(LOG_FILE, "a", encoding="utf-8") as f:
-		timestamp = time.strftime("%b %d %H:%M:%S")
-		log_line = f"{timestamp} auth-inspector: {source} auth failed from IP={ip_address} on {tty_field}\n"
-		
 		f.write(log_line)
-		logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {source}: TTY={tty_field}, IP={ip_address}")
+
+	logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {session.fail_type}: TTY={session.tty_field}, IP={session.ip_address}")
 
 
 def monitor_sudo() -> None:
@@ -101,13 +170,11 @@ def monitor_sudo() -> None:
 			message = entry.get('MESSAGE', '')
 			if not "authentication failure" in message: continue
 
-			tty = get_tty(message)
-			ip_address = get_ip_from_tty(tty)
+			session = TerminalSession.from_log_line(message, comm)
+			if session.is_local():
+				continue
 
-			local_session = not ip_address
-			if local_session: continue 
-
-			log_incident(ip_address, tty, source=comm.upper())
+			log_incident(session)
 
 
 if __name__ == "__main__":
