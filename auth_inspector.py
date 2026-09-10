@@ -160,7 +160,7 @@ def log_incident(session: TerminalSession) -> None:
 	with open(LOG_FILE, "a", encoding="utf-8") as f:
 		f.write(log_line)
 
-	logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {session.fail_type}: TTY={session.tty_field}, IP={session.ip_address}")
+	logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {session.fail_type}: TTY={session.tty}, IP={session.ip_address}")
 
 
 def run() -> None:
