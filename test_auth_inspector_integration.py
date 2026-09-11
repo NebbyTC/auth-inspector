@@ -137,6 +137,6 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			log_incident(session)
 			
 			with open(LOG_FILE, "r") as f:
-				line_count = len(f.redlines())
+				line_count = len(f.readlines())
 
 			self.assertEqual(line_count, i + 1)
