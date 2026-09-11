@@ -88,3 +88,63 @@ jobs:
       run: |
         export PATH="/tmp/mock_bin:$PATH"
         sudo -E python -m unittest test_auth_inspector_integration.py
+
+  build-and-release-deb:
+    runs-on: ubuntu-latest
+    needs: [run-unit-tests, run-security-scan, run-integration-tests]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Generate Rolling Version Number
+      id: get_version
+      run: |
+        TIMESTAMP=$(date +'%Y%m%d')
+        TIME_STAMP=$(date +'%H%M')
+        VERSION="1.0.0~${TIMESTAMP}.${TIME_STAMP}"
+        
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Wersja pakietu to: $VERSION"
+
+    - name: Prepare Debian Package Structure
+      run: |
+        mkdir -p build/usr/bin
+        mkdir -p build/DEBIAN
+        mkdir -p build/lib/systemd/system
+
+        cp auth_inspector.py build/usr/bin/auth-inspector
+        chmod +x build/usr/bin/auth-inspector
+        cp .github/pkg-config/auth-inspector.service build/lib/systemd/system/auth-inspector.service
+
+        # Przekazujemy output do środowiska basha dla narzędzia envsubst
+        export VERSION="${{ steps.get_version.outputs.VERSION }}"
+        envsubst < .github/pkg-config/control > build/DEBIAN/control
+
+        if [ -f .github/pkg-config/postinst ]; then
+          cp .github/pkg-config/postinst build/DEBIAN/postinst
+          chmod +x build/DEBIAN/postinst
+        fi
+
+        if [ -f .github/pkg-config/postrm ]; then
+          cp .github/pkg-config/postrm build/DEBIAN/postrm
+          chmod +x build/DEBIAN/postrm
+        fi
+
+    - name: Build .deb Package
+      run: |
+        dpkg-deb --build build "auth-inspector_${{ steps.get_version.outputs.VERSION }}_all.deb"
+
+    - name: Publish Rolling Release to GitHub
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: rolling-release
+        name: "Auth Inspector - Rolling Release (Latest)"
+        body: |
+          Automatyczna kompilacja najnowszej wersji z gałęzi `main`.
+          Wersja: `${{ steps.get_version.outputs.VERSION }}`
+        prerelease: true
+        files: auth-inspector_${{ steps.get_version.outputs.VERSION }}_all.deb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

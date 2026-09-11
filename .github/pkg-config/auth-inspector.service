@@ -1,0 +1,15 @@
+[Unit]
+Description=Extensions for Fail2Ban used to ban users with failed authorization attempts
+After=systemd-journald.service network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/auth-inspector
+Restart=always
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
