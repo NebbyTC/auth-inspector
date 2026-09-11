@@ -15,10 +15,10 @@ która reprezetuje połączenie SSH i posiada metody do wyciągania TTY i IP.
 
 Jak będzie działać ekosystem?
 
-	1. Kod jest pisany na tym kompie
-	2. Następnie jest wrzucany na githuba i tam skrzętnie testowany
-	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji
-	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 
+	1. Kod jest pisany na tym kompie												[done]
+	2. Następnie jest wrzucany na githuba i tam skrzętnie testowany					[done]
+	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji		
+	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 	
 	auth-inspectora po wpisaniu odpowiedniej komendy.
 	5. Po zdobyciu uprawnień administratorskich możesz użyć komendy, która pobiera
 	najnowszą wersję skryptu i podmienia

@@ -95,7 +95,8 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			f"Błąd: Plik logu nie został utworzony w lokalizacji {LOG_DIR}"
 		)
 
-	def test_log_content(self):
+
+	def test_log_saved_content(self):
 		"""
 			Testuje czy zawartość pojedyńczej linijki plik logów jest poprawna.
 		"""
@@ -118,3 +119,24 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		self.assertIn("192.168.1.1", session.ip_address, "Błąd: Program nie zapisuje poprawnie informacji o adresie IP logowanej sesji.")
 
 
+	def test_log_saving_line_count(self):
+		"""
+			Testuje czy jednemu wywołaniu funkcji .log_incident() 
+			odpowiada dokładnie jedna zapisana linijka.
+		"""
+
+		self.assertFalse(
+			os.path.exists(LOG_DIR), 
+			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+		)
+		
+		session = TerminalSession("sudo", "pts/1", "192.168.1.104")
+		on_startup()
+
+		for i in range(2):
+			log_incident(session)
+			
+			with open(LOG_FILE, "r") as f:
+				line_count = len(f.redlines())
+
+			self.assertEqual(line_count, i + 1)
