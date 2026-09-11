@@ -94,6 +94,9 @@ jobs:
     needs: [run-unit-tests, run-security-scan, run-integration-tests]
     if: github.ref == 'refs/heads/main'
 
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout repository code
       uses: actions/checkout@v4
