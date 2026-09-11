@@ -3,7 +3,15 @@ name: Python CI Pipeline
 # <-- Kiedy automatyzacja ma się uruchomić
 on:
   push:
-    branches: [ "main" ]  # <-- Uruchom przy każdym wypchnięciu kodu na gałąź main
+    branches: [ "main" ]
+    paths-ignore:
+      - '.github/workflows/**'       # Ignoruj zmiany w potokach CI/CD
+      - '.github/pkg-config/**'      # Ignoruj szablony pakowania (control, postinst)
+      - 'test_*.py'                  # Ignoruj pliki z testami jednostkowymi/integracyjnymi
+      - 'tests/**'                   # Ignoruj cały folder z testami
+      - 'README.md'                  # Ignoruj zmiany w dokumentacji
+      - '.gitignore'              
+
   pull_request:
     branches: [ "main" ]  # <-- Uruchom przy próbie połączenia kodu z main
 
