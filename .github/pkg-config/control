@@ -6,4 +6,4 @@ Architecture: all
 Depends: python3, python3-systemd, systemd
 Maintainer: NebbyTC <mr.nikodemis@gmail.com>
 Description:  Security monitor for authentication attempts using su and sudo. 
-Analyzes log stream and exports IP addresses for Fail2Ban.
+ Analyzes log stream and exports IP addresses for Fail2Ban.
