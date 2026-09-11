@@ -105,6 +105,9 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      TZ: 'Europe/Warsaw'
+
     steps:
     - name: Checkout repository code
       uses: actions/checkout@v4
