@@ -9,10 +9,6 @@ Analizuje strumień logów systemd i eksportuje adresy IP intruzów dla Fail2Ban
 
 MIĘDZYCZAS: przypinki/rzepy na kable
 
-
-Może warto ten kod przerobić tak, aby była główna klasa Connection, 
-która reprezetuje połączenie SSH i posiada metody do wyciągania TTY i IP. 
-
 Jak będzie działać ekosystem?
 
 	1. Kod jest pisany na tym kompie												[done]
