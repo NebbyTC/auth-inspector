@@ -17,15 +17,24 @@ Jak będzie działać ekosystem?
 
 	1. Kod jest pisany na tym kompie												[done]
 	2. Następnie jest wrzucany na githuba i tam skrzętnie testowany					[done]
-	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji		
-	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 	
+	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji		[done]	
+	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 	[scrapped]
 	auth-inspectora po wpisaniu odpowiedniej komendy.
-	5. Po zdobyciu uprawnień administratorskich możesz użyć komendy, która pobiera
+	5. Po zdobyciu uprawnień administratorskich możesz użyć komendy, która pobiera	[scrapped]
 	najnowszą wersję skryptu i podmienia
+	6. Zintegrować publiczne repozytorium tego projektu z reproxem					[done]
 
-	6. Potem jeszcze zapytać się AI, jak najlepiej te skrypty spakować, czy do osobnego
+
+	7. Potem jeszcze zapytać się AI, jak najlepiej te skrypty spakować, czy do osobnego		[done]
 	repo czy tego samego i ewentualnie jakie są dobre praktyki dla repo takiej usługi
 	dla linuxa  
+
+	8. Sprawdzić czy jest jakiś terminal który nie jest TTY, a co za tym idzie może
+	umknąć temu programowi
+
+	9. Dylemat czasu oczekiwania po restarcie i obsługi wyjątków(jak to najlepiej zrobić)
+
+	10. Ataki log injection i oszukiwanie sesji TTY (zabezpieczenia przed nimi)
 """
 
 import logging

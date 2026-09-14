@@ -6,7 +6,6 @@ After=systemd-journald.service network.target
 Type=simple
 ExecStart=/usr/bin/auth-inspector
 Restart=always
-RestartSec=5s
 
 StandardOutput=journal
 StandardError=journal
