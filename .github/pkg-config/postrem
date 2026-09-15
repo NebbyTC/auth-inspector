@@ -1,11 +1,9 @@
 #!/bin/sh
-# Przerwij skrypt, jeśli jakakolwiek komenda zwróci błąd non-zero
 set -e
 
-# <-- faza usuwania pakietu (remove) lub całkowitego czyszczenia (purge)
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     if [ -d /run/systemd/system ] && systemctl list-unit-files | grep -q "^auth-inspector.service"; then
-        echo "[Auth-inspector] Zatrzymywanie i wyłączanie usługi systemd..."
+        echo "[Auth-inspector] Turning of the auth-inspector service..."
         systemctl stop auth-inspector.service || true
         systemctl disable auth-inspector.service || true
         systemctl daemon-reload || true
@@ -14,8 +12,8 @@ fi
 
 if [ "$1" = "purge" ]; then
     if [ -d "/var/log/auth-inspector" ]; then
-        echo "[Auth-inspector] Całkowite czyszczenie pozostałości po pakiecie..."
-        echo "[Auth-inspector] Usuwanie katalogu logów /var/log/auth-inspector..."
+        echo "[Auth-inspector] Removing the package files..."
+        echo "[Auth-inspector] Deleting the log directory /var/log/auth-inspector..."
         rm -rf /var/log/auth-inspector
     fi
 fi

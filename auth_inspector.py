@@ -1,38 +1,4 @@
 #!/usr/bin/env python3
-"""
-Monitor bezpieczeństwa komendy sudo dla serwera Proxmox VE.
-Analizuje strumień logów systemd i eksportuje adresy IP intruzów dla Fail2Ban.
-
-1. Github i testy dla tego kodu
-2. MC Hosting
-3. Research na temat opcji backupowania przy wykorzystaniu mojego serwera Proxmox VE
-
-MIĘDZYCZAS: przypinki/rzepy na kable
-
-Jak będzie działać ekosystem?
-
-	1. Kod jest pisany na tym kompie												[done]
-	2. Następnie jest wrzucany na githuba i tam skrzętnie testowany					[done]
-	3. Jeżeli przeszedł pomyślnie przez testy, to jest wystawiany do produkcji		[done]	
-	4. Po zalogowaniu na serwer, wyświelta się komunikat że można zaktualizować 	[scrapped]
-	auth-inspectora po wpisaniu odpowiedniej komendy.
-	5. Po zdobyciu uprawnień administratorskich możesz użyć komendy, która pobiera	[scrapped]
-	najnowszą wersję skryptu i podmienia
-	6. Zintegrować publiczne repozytorium tego projektu z reproxem					[done]
-
-
-	7. Potem jeszcze zapytać się AI, jak najlepiej te skrypty spakować, czy do osobnego		[done]
-	repo czy tego samego i ewentualnie jakie są dobre praktyki dla repo takiej usługi
-	dla linuxa  
-
-	8. Sprawdzić czy jest jakiś terminal który nie jest TTY, a co za tym idzie może
-	umknąć temu programowi
-
-	9. Dylemat czasu oczekiwania po restarcie i obsługi wyjątków(jak to najlepiej zrobić)
-
-	10. Ataki log injection i oszukiwanie sesji TTY (zabezpieczenia przed nimi)
-"""
-
 import logging
 import os
 import subprocess
@@ -128,25 +94,23 @@ class TerminalSession:
 		
 			return data_splitted[5].strip("()")
 
-		# Zmienione na LookupError z powody braku elementu w systemie
 		raise LookupError(f"[Auth-inspector] Terminal {tty_name} was not found in active sessions.")
 
 
 def on_startup() -> None:
 	"""
-		Wykonuje wszystkie czynności związane 
-		z uruchomieniem programu.
+		Does all the program start up chores
 	"""
 
-	# Upewniamy się, że skrypt jest uruchomiony jako root
+	# Ensuring that the script runs as root
 	if os.geteuid() != 0:
 		print("[Auth-inspector] Error: Please run the script as root.", file=sys.stderr)
 		sys.exit(1)
 
-	# Tworzenie katalogu logów, jeśli nie istnieje
+	# Creating the log directory if it doesn't exist 
 	os.makedirs(LOG_DIR, exist_ok=True)
 	
-	# Konfiguracja bezpiecznego i czytelnego logowania błędów skryptu
+	# Configuring the error logging part
 	logging.basicConfig(
 		level=logging.INFO,
 		format='%(asctime)s [%(levelname)s] %(message)s',
@@ -156,7 +120,7 @@ def on_startup() -> None:
 
 def log_incident(session: TerminalSession) -> None:
 	"""
-		Zapisuje incydent do pliku logów auth-inspector.
+		Logs the incident to the auth-inspector log file.
 	"""
 
 	timestamp = time.strftime("%b %d %H:%M:%S")
@@ -165,14 +129,16 @@ def log_incident(session: TerminalSession) -> None:
 	with open(LOG_FILE, "a", encoding="utf-8") as f:
 		f.write(log_line)
 
-	logging.info(f"[Auth inspector] Zarejestrowano próbę włamania przez {session.fail_type}: TTY={session.tty}, IP={session.ip_address}")
+	logging.info(f"[Auth inspector] Failed auth attempt on {session.fail_type}: TTY={session.tty}, IP={session.ip_address}")
 
 
 def run() -> None:
-	"""Główna pętla zaporowa nasłuchująca zdarzeń jądra systemd."""
+	"""
+		The main loop that listens to the systemd core events.
+	"""
 
 	if journal is None:
-		logging.warning("[System] Środowisko nie obsługuje systemd. Tryb nasłuchiwania wyłączony (symulacja testowa).")
+		logging.warning("[Auth inspector] OS doesn't support systemd. Listening mode activated (test simulation).")
 		return
 	
 	try:
@@ -183,10 +149,10 @@ def run() -> None:
 		reader.seek_tail()
 		reader.get_previous()
 	except OSError as err:
-		logging.critical("Nie można uzyskać dostępu do logów systemd: %s", err)
+		logging.critical("[Auth inspector] Cannot reach systemd logs: %s", err)
 		sys.exit(1)
 
-	logging.info("[Auth inspector] Uruchomiono pomyślnie. Nasłuchiwanie prób włamań przez sudo...")
+	logging.info("[Auth inspector] Start successful. Listening for authentication attempts...")
 
 	while True:
 		if reader.wait() == journal.NOP:

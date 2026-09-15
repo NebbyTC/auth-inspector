@@ -5,6 +5,7 @@ import io
 
 from auth_inspector import TerminalSession, on_startup
 
+
 class TestTerminalSession(unittest.TestCase):
 
 
@@ -13,7 +14,7 @@ class TestTerminalSession(unittest.TestCase):
 
 	def test_get_tty_valid_return(self):
 		""" 
-			Testuje, czy funkcja poprawnie wyciąga TTY z logu systemd. 
+			Tests if the function gets TTY from a systemd log properly.
 		"""
 
 		session = TerminalSession(fail_type="", tty=None, ip_address=None)
@@ -26,7 +27,7 @@ class TestTerminalSession(unittest.TestCase):
 	@patch('subprocess.run')
 	def test_get_ip_vaild_return(self, mock_run):
 		""" 
-			Testuje, czy funkcja poprawnie wyciąga IP z wyniku polecenia who. 
+			Tests if the function gets IP from the who command properly.
 		"""
 
 		mock_response = MagicMock()
@@ -41,7 +42,7 @@ class TestTerminalSession(unittest.TestCase):
 
 	def test_is_local_returns_false(self):
 		"""
-			Testuje, czy metoda .is_local() poprawnie rozpoznaje sesję shh.
+			Tests if the .is_local() method properly recognizes a ssh session.
 		"""
 
 		session = TerminalSession(fail_type="sudo", tty="pts/0", ip_address="192.168.1.50")
@@ -50,7 +51,7 @@ class TestTerminalSession(unittest.TestCase):
 	
 	def test_is_local_returns_true(self):
 		"""
-			Testuje, czy metoda .is_local() poprawnie rozpoznaje sesję lokalną.
+			Tests if the .is_local() method properly recognizes a local session.
 		"""
 			
 		session = TerminalSession(fail_type="sudo", tty="pts/0", ip_address=None)
@@ -60,18 +61,17 @@ class TestTerminalSession(unittest.TestCase):
 	@patch("os.geteuid", create=True)
 	def test_startup_permmision_check(self, mock_geteuid):
 		"""
-			Testuje czy funkcja startująca poprawnie wykrywa brak uprawnień.
+			Tests if the starup function detects lack of root permisions correctly.
 		"""
 
-		mock_geteuid.return_value = 1000 # <-- symuluje brak uprawnień
+		mock_geteuid.return_value = 1000 # <-- simulates lack of permissions
 
-		# Ponieważ funkcja wywołuje sys.exit(1), musimy przechwycić ten stan
 		with self.assertRaises(SystemExit) as context:
 			on_startup()
 
 		self.assertEqual(
 			context.exception.code, 1,
-			"Błąd: Program nie wykrył braku uprawnień w trakcie uruchamiania."
+			"Error: The program did not detect lack of permissions during the test."
 		)
 
 
@@ -79,11 +79,11 @@ class TestTerminalSession(unittest.TestCase):
 	@patch("sys.stderr", new_callable=io.StringIO)
 	def test_startup_permmision_check_messsage(self, mock_stderr, mock_geteuid):
 		"""
-			Testuje czy funkcja startująca poprawnie podaje 
-			informację o braku uprawnień.
+			Tests if the startup function prints the message
+			about lack of permissions properly.
 		"""
 	
-		mock_geteuid.return_value = 1000 # <-- symuluje brak uprawnień
+		mock_geteuid.return_value = 1000 # <-- simulates lack of permissions
 	
 		with self.assertRaises(SystemExit):
 			on_startup()
@@ -94,8 +94,8 @@ class TestTerminalSession(unittest.TestCase):
 			"[Auth-inspector] Error: Please run the script as root.", 
 			printed_output, 
 			(
-				"Błąd: Program przerwał działanie, ale nie wyświetlił użytkownikowi "
-				"jasnego komunikatu o braku uprawnień."
+				"Error: The program stopped working(as intended) but did not "
+				"display a clear message about the lack of permissions problem."
 			)
 		)
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Extensions for Fail2Ban used to ban users with failed authorization attempts
+Description=Security monitor for authentication attempts using su and sudo.
 After=systemd-journald.service network.target
 
 [Service]

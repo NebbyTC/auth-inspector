@@ -10,7 +10,7 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 
 	def remove_logs(self):
 		"""
-			Usuwa pliki logów powstałe w wyniku działania programu.
+			Deletes files created during at runtime.
 		"""
 
 		if os.path.exists(LOG_DIR):
@@ -18,73 +18,67 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 
 	def setUp(self):
 		"""
-			Przygotowanie przed każdym testem.
+			Preparation before each test.
 		"""
 
 		self.remove_logs()
 
 	def tearDown(self):
 		"""
-			Sprzątanie po każdym teście.
+			Cleanup after each test.
 		"""
 
 		self.remove_logs()
 
-	def test_with_actual_who_command(self):
+	def test_with_who_command(self):
 		"""
-			Uruchamia realną komendę 'who'.
-			Sprawdza, czy system zwraca dane w oczekiwanym formacie i czy
-			nasz kod nie wywala się na rzeczywistym strumieniu stdout.
+			Tests if the program works properly with the who command.
 		"""
 		try:
-			# Wywołujemy prawdziwą komendę, dokładnie tak jak robi to nasz skrypt
 			result = subprocess.run(['who'], capture_output=True, text=True, check=True)
-			
-			# Sprawdzamy stabilność środowiska: czy komenda cokolwiek zwróciła
-			print(f"\n[INFO] Realny wynik 'who' na tym serwerze:\n{result.stdout}")
+			print(f"\n[INFO] WHO output:\n{result.stdout}")
 			
 		except (subprocess.SubprocessError, FileNotFoundError) as e:
-			self.fail(f"Test integracyjny nie powiódł się: Komenda 'who' jest niedostępna! Błąd: {e}")
+			self.fail(f"Integration test failed, WHO command not found! Error: {e}")
 
 	def test_search_non_existent_terminal(self):
 		"""
-			Sprawdza zachowanie kodu w starciu z żywym systemem,
-			gdy szukamy terminala, który na 100% nie istnieje w aktywnych sesjach.
+			Tests if the program reacts properly to a situation in which
+			it searches for a terminal which does not exist in the active sessions.
 		"""
-		# 'fake/terminal/999' na pewno nie pojawi się w wyniku komendy 'who'
+		
 		with self.assertRaises(LookupError) as context:
-			TerminalSession._fetch_ip_from_system("fake/terminal/999")
+			TerminalSession._fetch_ip_from_system("fake/terminal/999")# <-- will not be found be the who command
 			
-		# Sprawdzamy, czy rzucony wyjątek zawiera nasz unikalny komunikat aplikacji
 		self.assertIn("[Auth-inspector] Terminal", str(context.exception))
 
 
 	def test_log_directory_creation(self):
 		"""
-			Sprawdza czy jeżeli folder logów jeszcze nie istnieje to zostanie stworzony przez skrypt.
+			Checks if the nonexistent logs folder was created by the program.
 		"""
 
 		self.assertFalse(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 
 		on_startup()
 
 		self.assertTrue(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Folder z logami({LOG_DIR}) programu nie został utworzony pomimo jego braku."
+			f"Error: The logs folder({LOG_DIR}) of the program was not created despite it did not exist before."
 		)
 		
 
 	def test_log_saving(self):
 		"""
-			Sprawdza czy plik logów zapisywanych na dysku został poprawnie utworzony.
+			Checks if the nonexistent log file was created by the program.
 		"""
 
 		self.assertFalse(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 
 		on_startup()
@@ -92,18 +86,18 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 
 		self.assertTrue(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Plik logu nie został utworzony w lokalizacji {LOG_DIR}"
+			f"Error: The log file was not created in the path {LOG_DIR}"
 		)
 
 
 	def test_log_saved_content(self):
 		"""
-			Testuje czy zawartość pojedyńczej linijki plik logów jest poprawna.
+			Tests if the content of a singular line of the log file is valid.
 		"""
 
 		self.assertFalse(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 
 		session = TerminalSession("sudo", "pts/1", "192.168.1.104")
@@ -114,20 +108,20 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		with open(LOG_FILE, "r") as f:
 			file_content = f.read()
 		
-		self.assertIn("SUDO", session.fail_type, "Błąd: Program nie zapisuje poprawnie informacji o rodzaju błędnego uwierzytelnienia.")
-		self.assertIn("pts/1", session.tty, "Błąd: Program nie zapisuje poprawnie informacji o identyfikatorze TTY logowanej sessji.")
-		self.assertIn("192.168.1.1", session.ip_address, "Błąd: Program nie zapisuje poprawnie informacji o adresie IP logowanej sesji.")
+		self.assertIn("SUDO", session.fail_type, "Error: The program does not save the information about failed auth type properly.")
+		self.assertIn("pts/1", session.tty, "Error: The Program does not save the information about the TTY properly.")
+		self.assertIn("192.168.1.1", session.ip_address, "Error: The Program does not save the information about the IP properly.")
 
 
 	def test_log_saving_line_count(self):
 		"""
-			Testuje czy jednemu wywołaniu funkcji .log_incident() 
-			odpowiada dokładnie jedna zapisana linijka.
+			Tests if one call of the .log_incident() corresponds
+			to exactly one saved line in the log file.
 		"""
 
 		self.assertFalse(
 			os.path.exists(LOG_DIR), 
-			f"Błąd: Folder z logami({LOG_DIR}) programu już istniał przed wykonaniem testu, a nie powinien."
+			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 		
 		session = TerminalSession("sudo", "pts/1", "192.168.1.104")

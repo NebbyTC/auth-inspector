@@ -1,18 +1,18 @@
 name: Python CI Pipeline
 
-# <-- Kiedy automatyzacja ma się uruchomić
+# <-- When the automatisation should run
 on:
   push:
     branches: [ "main" ]
     paths-ignore:
-      - '.github/workflows/**'       # Ignoruj zmiany w potokach CI/CD
-      - 'test_*.py'                  # Ignoruj pliki z testami jednostkowymi/integracyjnymi
-      - 'tests/**'                   # Ignoruj cały folder z testami
-      - 'README.md'                  # Ignoruj zmiany w dokumentacji
+      - '.github/workflows/**'       
+      - 'test_*.py'                  
+      - 'tests/**'                   
+      - 'README.md'                  
       - '.gitignore'              
 
   pull_request:
-    branches: [ "main" ]  # <-- Uruchom przy próbie połączenia kodu z main
+    branches: [ "main" ]  # <-- Run on merge attempt with 'main'
 
 jobs:
   run-unit-tests:
@@ -131,7 +131,6 @@ jobs:
         chmod +x build/usr/bin/auth-inspector
         cp .github/pkg-config/auth-inspector.service build/lib/systemd/system/auth-inspector.service
 
-        # Przekazujemy output do środowiska basha dla narzędzia envsubst
         export VERSION="${{ steps.get_version.outputs.VERSION }}"
         envsubst < .github/pkg-config/control > build/DEBIAN/control
 
@@ -155,8 +154,8 @@ jobs:
         tag_name: rolling-release
         name: "Auth Inspector - Rolling Release (Latest)"
         body: |
-          Automatyczna kompilacja najnowszej wersji z gałęzi `main`.
-          Wersja: `${{ steps.get_version.outputs.VERSION }}`
+          Automatic compilation of the newest version from the branch `main`.
+          Version: `${{ steps.get_version.outputs.VERSION }}`
         prerelease: true
         files: auth-inspector_${{ steps.get_version.outputs.VERSION }}_all.deb
       env:

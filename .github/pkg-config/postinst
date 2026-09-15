@@ -1,13 +1,11 @@
 #!/bin/sh
-# Przerwij skrypt, jeśli jakakolwiek komenda zwróci błąd non-zero
 set -e
 
-# $1 w skryptach Debiana oznacza akcję. "configure" to standardowa instalacja/aktualizacja.
 if [ "$1" != "configure" ]; then
 	exit 0
 fi
 
-echo "[Auth-inspector] Konfiguracja pakietu w systemie..."
+echo "[Auth-inspector] Configuring package..."
 
 if systemctl list-unit-files | grep -q "^auth-inspector.service"; then
     echo "[Auth-inspector] Włączanie autostartu i uruchamianie usługi..."
@@ -15,8 +13,8 @@ if systemctl list-unit-files | grep -q "^auth-inspector.service"; then
     systemctl enable auth-inspector.service
     systemctl restart auth-inspector.service
 else
-    echo "[Auth-inspector] Warning: Nie znaleziono pliku auth-inspector.service w systemie."
-    echo "                 Upewnij się, że plik usługi systemd został poprawnie wdrożony."
+    echo "[Auth-inspector] Warning: Couldn't find auth-inspector.service in the filesystem."
+    echo "                 Please make sure that the systemd.service file was properly implemented."
 fi
 
 exit 0
