@@ -1,11 +1,12 @@
 import unittest
-import subprocess
+import threading
+import time
 import shutil
 import os
 
 from systemd import journal 
 
-from auth_inspector import log_incident, on_startup, on_log_line_recieve, open_system_logs, LOG_DIR, LOG_FILE
+from auth_inspector import log_incident, on_startup, on_log_line_recieve, open_system_logs, run, LOG_DIR, LOG_FILE
 
 
 
@@ -144,22 +145,27 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			injected via journal.send().
 		"""
 
-		with open_system_logs() as reader:
-			
-			print("\n[CI Test] Wysyłam żywe zdarzenie przez systemowe API journal.send()...")
-			
+		inspector_thread = threading.Thread(target=run, daemon=True)
+		inspector_thread.start()
+		
+		time.sleep(1.0)
 
-			journal.send(
-				MESSAGE="""type=CRED_ACQ msg=audit(1789554012.232:957): pid=17451 uid=0 auid=1000 ses=12 subj=unconfined msg='op=PAM:setcred grantors=pam_permit acct="sas" exe="/usr/lib/openssh/sshd-session" hostname=192.168.1.67 addr=192.168.1.67 terminal=ssh res=success' UID="root" AUID="sas" """,
-				SYSLOG_IDENTIFIER='audisp-syslog'
-			)
+		journal.send(
+			MESSAGE='type=CRED_ACQ msg=audit(1789554012.232:957): pid=17451 uid=0 auid=1000 ses=88 acct="prezes" exe="/usr/lib/openssh/sshd-session" addr=192.168.1.55 AUID="prezes"',
+			SYSLOG_IDENTIFIER='audisp-syslog'
+		)
+		time.sleep(0.1)
+		journal.send(
+			MESSAGE='type=USER_AUTH msg=audit(1789554015.555:958): pid=17460 uid=0 auid=1000 ses=88 acct="root" exe="/usr/bin/sudo" res=failed',
+			SYSLOG_IDENTIFIER='audisp-syslog'
+		)
 
-			wait_result = reader.wait()
-			
-			entries = list(reader)
-			self.assertTrue(len(entries) > 0, "Error: Reader did not recieve the auditid log!")
-			
-			raw_recieved = entries[0].get("MESSAGE", "")
-			
-			self.assertIn("type=CRED_ACQ", raw_recieved)
-			self.assertIn("addr=192.168.1.67", raw_recieved)
+		time.sleep(5)
+		
+		self.assertTrue(os.path.exists(LOG_FILE), "Error: Log file was not created!")
+		
+		with open(LOG_FILE, "r") as f:
+			log_content = f.read()
+
+		self.assertIn("auth-inspector: Failed /usr/bin/sudo auth attempt from IP=192.168.1.55", log_content)
+
