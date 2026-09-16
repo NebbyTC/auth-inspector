@@ -35,7 +35,7 @@ class TestTerminalSession(unittest.TestCase):
 		self.assertEqual(result["ses"], "12")
 		self.assertEqual(result["type"], "CRED_ACQ")
 		self.assertEqual(result["res"], "success")
-		self.assertEqual(result["exe"], "/usr/bin/sudo")
+		self.assertEqual(result["exe"], "/usr/lib/openssh/sshd-session")
 		self.assertEqual(result["AUID"], "sas")
 
 	def test_invalid_message_parsing(self):
