@@ -43,6 +43,8 @@ def open_system_logs():
 		reader.get_previous()
 	
 		reader.add_match(SYSLOG_IDENTIFIER="audisp-syslog")
+
+		yield reader
 	
 	except OSError as err:
 		print(f"Error: Could not acces Systemd Journal: {err}", file=sys.stderr)
