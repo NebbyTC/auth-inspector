@@ -1,12 +1,16 @@
 import unittest
-import subprocess
+import threading
+import time
 import shutil
 import os
-from auth_inspector import TerminalSession, log_incident, on_startup, LOG_DIR, LOG_FILE
+
+from systemd import journal 
+
+from auth_inspector import log_incident, on_startup, on_log_line_recieve, open_system_logs, run, LOG_DIR, LOG_FILE
+
 
 
 class TestTerminalSessionIntegration(unittest.TestCase):
-
 
 	def remove_logs(self):
 		"""
@@ -29,29 +33,6 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		"""
 
 		self.remove_logs()
-
-	def test_with_who_command(self):
-		"""
-			Tests if the program works properly with the who command.
-		"""
-		try:
-			result = subprocess.run(['who'], capture_output=True, text=True, check=True)
-			print(f"\n[INFO] WHO output:\n{result.stdout}")
-			
-		except (subprocess.SubprocessError, FileNotFoundError) as e:
-			self.fail(f"Integration test failed, WHO command not found! Error: {e}")
-
-	def test_search_non_existent_terminal(self):
-		"""
-			Tests if the program reacts properly to a situation in which
-			it searches for a terminal which does not exist in the active sessions.
-		"""
-		
-		with self.assertRaises(LookupError) as context:
-			TerminalSession._fetch_ip_from_system("fake/terminal/999")# <-- will not be found be the who command
-			
-		self.assertIn("[Auth-inspector] Terminal", str(context.exception))
-
 
 	def test_log_directory_creation(self):
 		"""
@@ -82,13 +63,12 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		)
 
 		on_startup()
-		log_incident(TerminalSession("sudo", "pts/1", "192.168.1.104"))
+		log_incident("sudo", "192.168.1.67")
 
 		self.assertTrue(
 			os.path.exists(LOG_DIR), 
 			f"Error: The log file was not created in the path {LOG_DIR}"
 		)
-
 
 	def test_log_saved_content(self):
 		"""
@@ -100,17 +80,16 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 
-		session = TerminalSession("sudo", "pts/1", "192.168.1.104")
-
 		on_startup()
-		log_incident(session)
+		FAIL_TYPE = "sudo"
+		IP_ADDRESS = "192.168.1.67"
+		log_incident(FAIL_TYPE, IP_ADDRESS)
 
 		with open(LOG_FILE, "r") as f:
 			file_content = f.read()
 		
-		self.assertIn("SUDO", session.fail_type, "Error: The program does not save the information about failed auth type properly.")
-		self.assertIn("pts/1", session.tty, "Error: The Program does not save the information about the TTY properly.")
-		self.assertIn("192.168.1.1", session.ip_address, "Error: The Program does not save the information about the IP properly.")
+		self.assertIn(FAIL_TYPE, file_content, "Error: The program does not save the information about failed auth type properly.")
+		self.assertIn(IP_ADDRESS, file_content, "Error: The Program does not save the information about the IP properly.")
 
 
 	def test_log_saving_line_count(self):
@@ -124,13 +103,37 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 			f"Error: The logs folder({LOG_DIR}) of the program existed before the test and it should not."
 		)
 		
-		session = TerminalSession("sudo", "pts/1", "192.168.1.104")
 		on_startup()
 
 		for i in range(2):
-			log_incident(session)
+			log_incident("sudo", "192.168.1.67")
 			
 			with open(LOG_FILE, "r") as f:
 				line_count = len(f.readlines())
 
 			self.assertEqual(line_count, i + 1)
+
+
+	def test_auth_atempt_fail_detection(self):
+		"""
+			Tests if the program properly responds 
+			to a mock failed auth attempt.
+		"""
+
+		logged_action = {
+			"type": "USER_AUTH",
+			"res": "failed",
+			"exe": "/usr/bin/sudo",
+			"ses": "420"
+		}
+		
+		session_to_ip = {"420": "192.168.1.67", "421": "192.168.1.69"}
+
+		on_startup()
+		on_log_line_recieve(logged_action, session_to_ip)
+
+		with open(LOG_FILE, "r") as f:
+			file_content = f.read()
+		
+		self.assertIn("/usr/bin/sudo", file_content, "Error: The program does not save the information about failed auth type properly.")
+		self.assertIn("192.168.1.67", file_content, "Error: The Program does not save the information about the IP properly.")

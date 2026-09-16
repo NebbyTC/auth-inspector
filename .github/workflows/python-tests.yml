@@ -3,7 +3,7 @@ name: Python CI Pipeline
 # <-- When the automatisation should run
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "*" ]
     paths-ignore:
       - '.github/workflows/**'       
       - 'test_*.py'                  
