@@ -101,7 +101,7 @@ def run() -> None:
 		sys.exit(1)
 
 	logging.info("[Auth inspector] Start successful. Listening for authentication attempts...")
-	interesujace_typy = ["type=CRED_ACQ", "type=LOGIN", "type=USER_AUTH", "type=CRED_DISP", "type=USER_END"]
+	#interesujace_typy = ["type=CRED_ACQ", "type=LOGIN", "type=USER_AUTH", "type=CRED_DISP", "type=USER_END"]
 
 	session_to_ip = {}
 	while True:
