@@ -126,13 +126,27 @@ jobs:
         mkdir -p build/usr/bin
         mkdir -p build/DEBIAN
         mkdir -p build/lib/systemd/system
+        mkdir -p build/etc/audit/plugins.d/
 
         cp auth_inspector.py build/usr/bin/auth-inspector
         chmod +x build/usr/bin/auth-inspector
         cp .github/pkg-config/auth-inspector.service build/lib/systemd/system/auth-inspector.service
 
+        if [ -f .github/pkg-config/auth-inspector-syslog.conf ]; then
+          cp .github/pkg-config/auth-inspector-syslog.conf build/etc/audit/plugins.d/auth-inspector-syslog.conf
+        fi
+
         export VERSION="${{ steps.get_version.outputs.VERSION }}"
         envsubst < .github/pkg-config/control > build/DEBIAN/control
+
+        if [ -f .github/pkg-config/templates ]; then
+          cp .github/pkg-config/templates build/DEBIAN/templates
+        fi
+
+        if [ -f .github/pkg-config/config ]; then
+          cp .github/pkg-config/config build/DEBIAN/config
+          chmod +x build/build/DEBIAN/config || chmod +x build/DEBIAN/config
+        fi
 
         if [ -f .github/pkg-config/postinst ]; then
           cp .github/pkg-config/postinst build/DEBIAN/postinst

@@ -1,0 +1,7 @@
+Template: auth-inspector/enable_syslog_plugin
+Type: boolean
+Default: true
+Description: Do you want to automatically enable the syslog plugin for auditd?
+ Auth-inspector requires the auditd syslog plugin to be active. Selecting 'Yes' 
+ will create a dedicated configuration file in /etc/audit/plugins.d/. If you 
+ select 'No', you will need to configure this plugin manually.
