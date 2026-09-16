@@ -1,20 +1,42 @@
 #!/bin/sh
 set -e
 
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+fi
+
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     if [ -d /run/systemd/system ] && systemctl list-unit-files | grep -q "^auth-inspector.service"; then
-        echo "[Auth-inspector] Turning of the auth-inspector service..."
+        echo "[Auth-inspector] Turning off the auth-inspector service..."
         systemctl stop auth-inspector.service || true
         systemctl disable auth-inspector.service || true
         systemctl daemon-reload || true
     fi
+
+    echo "[Auth-inspector] Reloading auditd service..."
+    systemctl reload auditd.service >/dev/null || systemctl restart auditd.service >/dev/null || true
 fi
 
 if [ "$1" = "purge" ]; then
+    # <-- Clearing auth-inspector config files for auditd
+    PLUGIN_FILE="/etc/audit/plugins.d/auth-inspector-syslog.conf"
+    if [ -f "$PLUGIN_FILE" ]; then
+        echo "[Auth-inspector] Deleting the auditd plugin configuration $PLUGIN_FILE..."
+        rm -f "$PLUGIN_FILE"
+        
+        systemctl reload auditd.service >/dev/null || systemctl restart auditd.service >/dev/null || true
+    fi
+
+    # <-- Clearing auth-inspector logs
     if [ -d "/var/log/auth-inspector" ]; then
         echo "[Auth-inspector] Removing the package files..."
         echo "[Auth-inspector] Deleting the log directory /var/log/auth-inspector..."
         rm -rf /var/log/auth-inspector
+    fi
+
+    # <-- Clearing debconf cache (the module responsible for yes/no during installation)
+    if [ -e /usr/share/debconf/confmodule ]; then
+        db_purge || true
     fi
 fi
 

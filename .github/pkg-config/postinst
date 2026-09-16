@@ -1,12 +1,31 @@
 #!/bin/sh
 set -e
 
+. /usr/share/debconf/confmodule
+
 if [ "$1" != "configure" ]; then
 	exit 0
 fi
 
 echo "[Auth-inspector] Configuring package..."
 
+# <--- Auditd automatic configuration
+db_get auth-inspector/enable_syslog_plugin || true
+PLUGIN_FILE="/etc/audit/plugins.d/auth-inspector-syslog.conf"
+
+if [ "$RET" = "false" ]; then
+    if [ -f "$PLUGIN_FILE" ]; then
+        sed -i 's/^active\s*=\s*yes/active = no/' "$PLUGIN_FILE"
+    fi
+    echo "[Auth-inspector] Notice: The auditd syslog plugin will remain disabled."
+else
+    echo "[Auth-inspector] Success: The auditd syslog plugin has been enabled."
+fi
+
+echo "[Auth-inspector] Reloading auditd service..."
+systemctl reload auditd.service >/dev/null || systemctl restart auditd.service >/dev/null || true
+
+# <--- Auth-inspector propper configuration
 if systemctl list-unit-files | grep -q "^auth-inspector.service"; then
     echo "[Auth-inspector] Włączanie autostartu i uruchamianie usługi..."
 	systemctl daemon-reload
