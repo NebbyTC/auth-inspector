@@ -4,6 +4,7 @@ import sys
 import logging
 import enum
 import time
+import contextlib
 
 try:
 	from systemd import journal 
@@ -25,6 +26,35 @@ class Action(enum.Enum):
 	@classmethod
 	def _missing_(cls, value):
 		return cls.UNKNOWN
+
+
+@contextlib.contextmanager
+def open_system_logs():
+	"""
+		Context manager that safely initializes the systemd journal reader,
+		applies audit filters, and guarantees proper resource cleanup.
+	"""
+
+	reader = None
+
+	try:
+		reader = journal.Reader()
+		reader.seek_tail()
+		reader.get_previous()
+	
+		reader.add_match(SYSLOG_IDENTIFIER="audisp-syslog")
+	
+	except OSError as err:
+		print(f"Error: Could not acces Systemd Journal: {err}", file=sys.stderr)
+		sys.exit(1)
+	
+	except NameError:
+		print("Error: Dependency systemd.journal not found. Please run: apt install python3-systemd", file=sys.stderr)
+		sys.exit(1)
+
+	finally:
+		if reader != None:
+			reader.close()
 
 
 def is_root() -> bool:
@@ -109,33 +139,22 @@ def on_log_line_recieve(logged_action, session_to_ip):
 		log_incident(logged_action["exe"], session_to_ip[logged_action["ses"]])
 
 def run() -> None:
-
-	try:
-		reader = journal.Reader()
-		reader.seek_tail()
-		reader.get_previous()
-
-		reader.add_match(SYSLOG_IDENTIFIER="audisp-syslog")
-
-	except OSError as err:
-		print(f"Error: Could not acces Systemd Journal: {err}", file=sys.stderr)
-		sys.exit(1)
-
-	except NameError:
-		print("Error: Dependency systemd.journal not found. Please run: apt install python3-systemd", file=sys.stderr)
-		sys.exit(1)
-
-	logging.info("[Auth inspector] Start successful. Listening for authentication attempts...")
-	#interesujace_typy = ["type=CRED_ACQ", "type=LOGIN", "type=USER_AUTH", "type=CRED_DISP", "type=USER_END"]
-
+	"""
+		The main program loop.
+	"""
+	
 	session_to_ip = {}
-	while True:
-		if reader.wait() == journal.NOP:
-			continue
+
+	with open_system_logs() as reader:
+		logging.info("[Auth inspector] Start successful. Listening for authentication attempts...")
 		
-		for entry in reader:
-			logged_action = parse_audit_message(entry.get('MESSAGE', ''))
-			on_log_line_recieve(logged_action, session_to_ip)
+		while True:
+			if reader.wait() == journal.NOP:
+				continue
+		
+			for entry in reader:
+				logged_action = parse_audit_message(entry.get('MESSAGE', ''))
+				on_log_line_recieve(logged_action, session_to_ip)
 
 
 

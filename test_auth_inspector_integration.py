@@ -2,7 +2,11 @@ import unittest
 import subprocess
 import shutil
 import os
-from auth_inspector import log_incident, on_startup, on_log_line_recieve, LOG_DIR, LOG_FILE
+
+from systemd import journal 
+
+from auth_inspector import log_incident, on_startup, on_log_line_recieve, open_system_logs, LOG_DIR, LOG_FILE
+
 
 
 class TestTerminalSessionIntegration(unittest.TestCase):
@@ -132,3 +136,30 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		
 		self.assertIn("/usr/bin/sudo", file_content, "Error: The program does not save the information about failed auth type properly.")
 		self.assertIn("192.168.1.67", file_content, "Error: The Program does not save the information about the IP properly.")
+
+	def test_context_manager_wakes_up_correctly_on_live_event(self):
+		"""
+			Tests that the audit_journal_context opens successfully, 
+			and reader.wait() correctly handles a live systemd message 
+			injected via journal.send().
+		"""
+
+		with open_system_logs() as reader:
+			
+			print("\n[CI Test] Wysyłam żywe zdarzenie przez systemowe API journal.send()...")
+			
+
+			journal.send(
+				MESSAGE="""type=CRED_ACQ msg=audit(1789554012.232:957): pid=17451 uid=0 auid=1000 ses=12 subj=unconfined msg='op=PAM:setcred grantors=pam_permit acct="sas" exe="/usr/lib/openssh/sshd-session" hostname=192.168.1.67 addr=192.168.1.67 terminal=ssh res=success' UID="root" AUID="sas" """,
+				SYSLOG_IDENTIFIER='audisp-syslog'
+			)
+
+			wait_result = reader.wait()
+			
+			entries = list(reader)
+			self.assertTrue(len(entries) > 0, "Error: Reader did not recieve the auditid log!")
+			
+			raw_recieved = entries[0].get("MESSAGE", "")
+			
+			self.assertIn("type=CRED_ACQ", raw_recieved)
+			self.assertIn("addr=192.168.1.67", raw_recieved)
