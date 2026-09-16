@@ -123,6 +123,8 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 		}
 		
 		session_to_ip = {"420": "192.168.1.67", "421": "192.168.1.69"}
+
+		on_startup()
 		on_log_line_recieve(logged_action, session_to_ip)
 
 		with open(LOG_FILE, "r") as f:

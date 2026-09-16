@@ -103,11 +103,8 @@ def on_log_line_recieve(logged_action, session_to_ip):
 	
 	elif action_type == Action.SSH_AUTH_ATTEMPT:
 		auth_failed = logged_action["res"] == "failed"
-		print("sas I")
 		if not auth_failed: return
-		print("sas II")
 		if not logged_action["ses"] in session_to_ip: return# <-- this should be reported as sussy behaviour(should never happen!)
-		print("sas III")
 	
 		log_incident(logged_action["exe"], session_to_ip[logged_action["ses"]])
 
