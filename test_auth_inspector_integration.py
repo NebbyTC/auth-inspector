@@ -2,7 +2,7 @@ import unittest
 import subprocess
 import shutil
 import os
-from auth_inspector import log_incident, on_startup, LOG_DIR, LOG_FILE
+from auth_inspector import log_incident, on_startup, on_log_line_recieve, LOG_DIR, LOG_FILE
 
 
 class TestTerminalSessionIntegration(unittest.TestCase):
@@ -107,3 +107,26 @@ class TestTerminalSessionIntegration(unittest.TestCase):
 				line_count = len(f.readlines())
 
 			self.assertEqual(line_count, i + 1)
+
+
+	def test_auth_atempt_fail_detection(self):
+		"""
+			Tests if the program properly responds 
+			to a mock failed auth attempt.
+		"""
+
+		logged_action = {
+			"type": "USER_AUTH",
+			"res": "failed",
+			"exe": "/usr/bin/sudo",
+			"ses": "420"
+		}
+		
+		session_to_ip = {"420": "192.168.1.67", "421": "192.168.1.69"}
+		on_log_line_recieve(logged_action, session_to_ip)
+
+		with open(LOG_FILE, "r") as f:
+			file_content = f.read()
+		
+		self.assertIn("/usr/bin/sudo", file_content, "Error: The program does not save the information about failed auth type properly.")
+		self.assertIn("192.168.1.67", file_content, "Error: The Program does not save the information about the IP properly.")

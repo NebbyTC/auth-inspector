@@ -83,6 +83,31 @@ def log_incident(fail_type: str, ip_address: str) -> None:
 
 	logging.info(f"[Auth inspector] Failed auth attempt on {fail_type} from IP={ip_address}")
 
+def on_log_line_recieve(logged_action, session_to_ip):
+	"""
+		Responsible for handling a single 
+		log line recived by the program.
+	"""
+
+	action_type = Action(logged_action["type"])
+	if action_type == Action.UNKNOWN: return
+	
+	if action_type == Action.SSH_CONNECT:
+		invalid_action = logged_action["AUID"] == "unset"
+		if invalid_action: return
+	
+		session_to_ip[logged_action["ses"]] = logged_action["addr"]
+	
+	elif action_type == Action.SSH_DISCONNECT:
+		del session_to_ip[logged_action["ses"]]
+	
+	elif action_type == Action.SSH_AUTH_ATTEMPT:
+		auth_failed = logged_action["res"] == "failed"
+		if not auth_failed: return
+		if not logged_action["ses"] in session_to_ip: return# <-- this should be reported as sussy behaviour(should never happen!)
+	
+		log_incident(logged_action["exe"], session_to_ip[logged_action["ses"]])
+
 def run() -> None:
 
 	try:
@@ -110,25 +135,7 @@ def run() -> None:
 		
 		for entry in reader:
 			logged_action = parse_audit_message(entry.get('MESSAGE', ''))
-
-			action_type = Action(logged_action["type"])
-			if action_type == Action.UNKNOWN: continue
-
-			if action_type == Action.SSH_CONNECT:
-				invalid_action = logged_action["AUID"] == "unset"
-				if invalid_action: continue
-
-				session_to_ip[logged_action["ses"]] = logged_action["addr"]
-
-			elif action_type == Action.SSH_DISCONNECT:
-				del session_to_ip[logged_action["ses"]]
-
-			elif action_type == Action.SSH_AUTH_ATTEMPT:
-				auth_failed = logged_action["res"] == "failed"
-				if not auth_failed: continue
-				if not logged_action["ses"] in session_to_ip: continue
-
-				log_incident(logged_action["exe"], session_to_ip[logged_action["ses"]])
+			on_log_line_recieve(logged_action, session_to_ip)
 
 
 if __name__ == "__main__":
